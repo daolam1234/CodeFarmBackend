@@ -59,3 +59,39 @@ export const cleanupExpiredCoupons = async (req, res) => {
     return res.status(500).json({ status: false, message: error.message });
   }
 }; 
+
+ 
+export const getUserCoupons = async (req, res) => {
+  try {
+    const userId = req.user?._id || req.body.user_id;
+
+    if (!userId) {
+      return res.status(400).json({ status: false, message: "Thiếu user_id" });
+    }
+
+    const coupons = await CouponUser.find({ user_id: userId })
+      .populate('coupon_id') // Lấy thông tin chi tiết của coupon
+      .lean();
+
+    const formattedCoupons = coupons.map(item => {
+      const coupon = item.coupon_id;
+      return {
+        _id: coupon._id,
+        code: coupon.code,
+        description: coupon.description,
+        discount_type: coupon.discount_type,
+        discount_value: coupon.discount_value,
+        start_date: coupon.start_date,
+        end_date: coupon.end_date,
+        is_unlimited: coupon.is_unlimited,
+        is_used: item.is_used, // Trạng thái đã dùng hay chưa
+        added_at: item.createdAt, // Ngày thêm coupon
+      };
+    });
+
+    return res.json({ status: true, data: formattedCoupons });
+  } catch (error) {
+    console.error('Error getUserCoupons:', error);
+    return res.status(500).json({ status: false, message: error.message });
+  }
+};
